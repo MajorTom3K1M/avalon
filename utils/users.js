@@ -10,7 +10,7 @@ class Users {
         if (this.users.length < 1) {
             user.leader = true;
         }
-        this.rooms.push({ room, questRound: 0 });
+        this.rooms.push({ room, questRound: 0, leaderId: id });
         this.users.push(user);
         return user;
     }
@@ -23,6 +23,13 @@ class Users {
         }
 
         return user;
+    }
+    removeRoom(room) {
+        var usersInRoom = this.getUserList(room);
+
+        if (usersInRoom.length === 0) {
+            this.rooms = this.rooms.filter((r) => r.room !== room);
+        }
     }
     getUser(id) {
         return this.users.filter((user) => user.id === id)[0];
@@ -48,6 +55,8 @@ class Users {
     setLeader(id, leaderStatus) {
         var user = this.getUser(id);
         user.leader = leaderStatus;
+
+        this.changeRoomInfo()
 
         this.users.forEach((inListUser, ind) => {
             if (inListUser.id === id) {
@@ -127,6 +136,18 @@ class Users {
     updateVote(id, value) {
         let user = this.getUser(id);
         this.changeUserInfo(user.id, { field: 'vote', value: value });
+    }
+    setNewLeader(room) {
+        let userList = this.getUserList(room);
+        let roomInfo = this.getRoom(room);
+        let leaderId = roomInfo.leaderId;
+
+        let oldLeader = userList.find(user => user.id === leaderId);
+        let newLeader = this.users[(this.users.indexOf(oldLeader) + 1) % userList.length];
+        
+        this.changeUserInfo(leaderId, { field: 'leader', value: false });
+        this.changeUserInfo(newLeader.id, { field: 'leader', value: true });
+        this.changeRoomInfo(room, { field: 'leaderId', value: newLeader.id });
     }
 }
 

@@ -1,22 +1,34 @@
 import React from 'react';
-import { sendGameState, GAME_STATE, gameState } from '../../utils/socket'
+import { sendGameState, GAME_STATE } from '../../utils/socket'
 import PropTypes from 'prop-types';
 import { history } from '../../helpers';
 
 import {
-    Col,
-    Row,
     Container,
 } from 'reactstrap';
 
 class SelectTeam extends React.Component {
     constructor(props) {
         super(props);
+
+        this.onConfirm = this.onConfirm.bind(this);
+        this.onVoteApprove = this.onVoteApprove.bind(this);
+        this.onVoteReject = this.onVoteReject.bind(this);
     }
 
     onConfirm() {
-        const { gameState } = this.props;
-        sendGameState({ state: gameState, type: 'confirm' });
+        const { gameState, room } = this.props;
+        sendGameState({ state: gameState, type: 'confirm', room: room });
+    }
+    
+    onVoteApprove() {
+        const { gameState, room, id } = this.props;
+        sendGameState({ state: gameState, type: 'vote', room: room, vote: true, id: id });
+    }
+    
+    onVoteReject() {
+        const { gameState, room, id } = this.props;
+        sendGameState({ state: gameState, type: 'vote', room: room, vote: false, id: id });
     }
 
     render() {
@@ -39,17 +51,18 @@ class SelectTeam extends React.Component {
                                         {team.join(" ")}
                                     </span>
                                     {
-                                        team.length !== member && leader === true ? null :
+                                        gameState === GAME_STATE.SEND_MISSION && team.length === member && leader === true ?
                                         <span className="d-flex justify-content-center" style={{ paddingTop: 10 }}>
                                             <button className="custom_button button_success" onClick={this.onConfirm}>Confirm</button>
-                                        </span>
+                                        </span> : null
                                     }
                                     {
-                                        team.length !== member && leader === false && gameState === GAME_STATE.VOTE ? false :
+                                        gameState === GAME_STATE.VOTE && team.length === member && leader === false ?
                                         <span className="d-flex justify-content-center" style={{ paddingTop: 10 }}>
-                                            <button className="custom_button button_success" onClick={this.onConfirm}>Approve</button>
-                                            <button className="custom_button button_success" onClick={this.onConfirm}>Reject</button>
-                                        </span>
+                                            <button className="custom_button button_success" onClick={this.onVoteApprove}>Approve</button>
+                                            <span style={{ paddingLeft: 5, paddingRight: 5 }}></span>
+                                            <button className="custom_button button_danger" onClick={this.onVoteReject}>Reject</button>
+                                        </span> : null
                                     }
                                 </div>
                                 : null
@@ -70,8 +83,9 @@ SelectTeam.propTypes = {
     getUserList: PropTypes.func.isRequired,
     role: PropTypes.string.isRequired,
     team: PropTypes.array.isRequired,
-    member: PropTypes.number.isRequired,
-    leader: PropTypes.bool.isRequired
+    member: PropTypes.number,
+    leader: PropTypes.bool.isRequired,
+    id: PropTypes.string
 };
 
 export default SelectTeam;

@@ -19,6 +19,7 @@ class InGame extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
+            id: null,
             room: null,
             name: null,
             status: false,
@@ -26,6 +27,7 @@ class InGame extends React.Component {
             role: '',
             gameState: '',
             questRound: 0,
+            questMember: [],
             team: [],
             users: []
         }
@@ -34,7 +36,7 @@ class InGame extends React.Component {
                 const { room, name } = this.state;
                 let thisUser = users.find((user) => user.name === name && user.room === room)
                 if (thisUser) {
-                    this.setState({ leader: thisUser.leader ? true : false, id: thisUser.id, role: thisUser.role ? thisUser.role : '' });
+                    this.setState({ leader: thisUser.leader ? true : false, id: thisUser.id, role: thisUser.role ? thisUser.role : '', id: thisUser.id });
                 }
             });
             console.log(users)
@@ -76,7 +78,16 @@ class InGame extends React.Component {
             }
 
             if (gameStateParams.type === 'changeState') {
-                this.setState({ gameState: gameStateParams.state });
+                this.setState({ gameState: gameStateParams.state },() => {
+                    console.log(this.state);
+                });
+            }  
+            if (gameStateParams.type === 'updatePlayerList') {
+                this.setState({ users: gameStateParams.users });
+            }  
+            if (gameStateParams.type === 'updateLeader') {
+                let thisUser = gameStateParams.users.find((user) => (user.id === this.state.id)); 
+                this.setState({ leader: thisUser.leader ? true : false, team: [] });
             }
         })
     }
@@ -186,10 +197,11 @@ class InGame extends React.Component {
                     leader={this.state.leader}
                     room={this.state.room}
                     gameState={this.state.gameState}
+                    id={this.state.id}
                 />
             </div>
         );
     }
 }
 
-export default InGame
+export default InGame;

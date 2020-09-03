@@ -175,11 +175,12 @@ io.on('connection', (socket) => {
                 let userList = users.getUserList(params.room);
                 let filterNoVote = userList.filter(user => user.vote === null);
 
-                if (filterNoVote.length === 0) {
+                if (filterNoVote.length - 1 === 0) {
+                    console.log("IN THIS")
                     let approve = userList.filter(user => user.vote === true).length;
                     let reject = userList.filter(user => user.vote === false).length;
                     if (reject >= approve) {
-                        // setNewLeader();
+                        changeLeader(params.room);
                         changeState(params.room, GAME_STATE.SEND_MISSION);
                     } else if (approve > reject) {
                         changeState(params.room, GAME_STATE.MISSION);
@@ -210,6 +211,7 @@ io.on('connection', (socket) => {
         var user = users.removeUser(socket.id);
 
         if (user) {
+            users.removeRoom(user.room);
             io.to(user.room).emit('updateUserList', users.getUserList(user.room));
         }
     });
@@ -227,6 +229,12 @@ io.on('connection', (socket) => {
     function updatePlayersList(room) {
         let userList = users.getUserList(room);
         io.to(room).emit('gameState', { type: 'updatePlayerList', users: userList });
+    }
+
+    function changeLeader(room) {
+        users.setNewLeader(room);
+        let userList = users.getUserList(room);
+        io.to(room).emit('gameState', { type: 'updateLeader', users: userList });
     }
 
     function updateMissionVote() {
