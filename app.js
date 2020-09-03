@@ -54,6 +54,37 @@ app.use(webpackHotMiddleware(compiler));
 app.use(express.static(path.resolve(__dirname, '../dist')));
 //-------------------------------------------------------//
 
+const GAME_STATE = {
+    INIT_STATE: "initState",
+    SEND_MISSION: "sendMission",
+    VOTE: "vote",
+    MISSION: "mission",
+    MISSION_SUCCESS: "missionSuccess",
+    MISSION_FAIL: "missionFail",
+    UPDATE: "update",
+    FIND_MERLIN: "findMerlin",
+    BAD_WIN: "badWin",
+    GOOD_WIN: "goodWin"
+}
+
+const questSetupTable = [
+    { players: 5, questMember: [2, 3, 2, 3, 3] },
+    { players: 6, questMember: [2, 3, 4, 3, 4] },
+    { players: 7, questMember: [2, 3, 3, 4, 4] },
+    { players: 8, questMember: [3, 4, 4, 5, 5] },
+    { players: 9, questMember: [3, 4, 4, 5, 5] },
+    { players: 10, questMember: [3, 4, 4, 5, 5] }
+];
+
+let teamSetupTable = [
+    { players: 5, good: 3, evil: 2 },
+    { players: 6, good: 4, evil: 2 },
+    { players: 7, good: 4, evil: 3 },
+    { players: 8, good: 5, evil: 3 },
+    { players: 9, good: 6, evil: 3 },
+    { players: 10, good: 6, evil: 4 },
+];
+
 io.on('connection', (socket) => {
     console.log('New User Connected.');
 
@@ -72,7 +103,7 @@ io.on('connection', (socket) => {
     })
 
     socket.on('updateStatus', (params) => {
-        console.log("server", params);
+        // console.log("server", params);
         users.setUserStatus(socket.id, params.status);
 
         io.to(params.room).emit('updateUserList', users.getUserList(params.room));
@@ -91,14 +122,88 @@ io.on('connection', (socket) => {
         const { room } = params;
         let usersInRoom = users.getUserList(room);
         let countUsers = usersInRoom.length;
+        let qusetMember = questSetupTable.find((table) => (table.players === countUsers)).questMember;
+        users.changeRoomInfo(room, {
+            field: 'questMember',
+            value: qusetMember
+        });
+
+        users.changeRoomInfo(room, {
+            field: 'state',
+            value: GAME_STATE.INIT_STATE
+        });
+
+        // teamSetupTable fix later
 
         if (countUsers < 5 || countUsers > 10) {
             return callback();
         }
 
         users.randomRole(usersInRoom, countUsers);
-        // io.to(room).emit('updateUserList', users.getUserList(room));
-        io.to(room).emit('startGame', users.getUserList(room));
+        io.to(room).emit('startGame', users.getUserList(room))
+    });
+
+    socket.on('gameState', (params, callback) => {
+        switch (params.state) {
+            case "initState":
+                users.changeRoomInfo(params.room, {
+                    field: 'state',
+                    value: GAME_STATE.SEND_MISSION
+                });
+                io.to(params.room).emit('gameState', {
+                    state: GAME_STATE.INIT_STATE,
+                    setState: GAME_STATE.SEND_MISSION,
+                    roomInfo: users.getRoom(params.room),
+                    type: 'initSetup'
+                });
+                break;
+            case "sendMission":
+                let roomInfo = users.getRoom(params.room);
+                let member = roomInfo.questMember[roomInfo.round];
+                if (params.type === 'confirm') {
+                    users.resetVote(params.room);
+                    changeState(params.room, GAME_STATE.VOTE);
+                } else {
+                    updateTeamMemberList(params.team, member, params.room);
+                }
+                break;
+            case "vote":
+                if (params.type === 'vote') {
+                    users.updateVote(params.id, params.vote);
+                }
+
+                let userList = users.getUserList(params.room);
+                let filterNoVote = userList.filter(user => user.vote === null);
+
+                if (filterNoVote.length === 0) {
+                    let approve = userList.filter(user => user.vote === true).length;
+                    let reject = userList.filter(user => user.vote === false).length;
+                    if (reject >= approve) {
+                        // setNewLeader();
+                        changeState(params.room, GAME_STATE.SEND_MISSION);
+                    } else if (approve > reject) {
+                        changeState(params.room, GAME_STATE.MISSION);
+                        // updateMissionVote();
+                    }
+                }
+
+                updatePlayersList(params.room);
+                break;
+            case "mission":
+                break;
+            case "missionSuccess":
+                break;
+            case "missionFail":
+                break;
+            case "update":
+                break;
+            case "findMerlin":
+                break;
+        }
+    })
+
+    socket.on('selectTeam', (params) => {
+        io.to(params.room).emit('selectTeam', params.team);
     });
 
     socket.on('disconnect', () => {
@@ -109,6 +214,24 @@ io.on('connection', (socket) => {
         }
     });
 
+    function changeState(room, newState) {
+        users.changeRoomInfo(room, { field: 'state', value: newState });
+        io.to(room).emit('gameState', { state: newState, type: 'changeState' });
+    }
+
+    function updateTeamMemberList(team, member, room) {
+        // let roomInfo = users.getRoom(params.room);
+        io.to(room).emit('gameState', { state: GAME_STATE.SEND_MISSION, team: team, member: member, type: 'updateTeamMemberList' });
+    }
+
+    function updatePlayersList(room) {
+        let userList = users.getUserList(room);
+        io.to(room).emit('gameState', { type: 'updatePlayerList', users: userList });
+    }
+
+    function updateMissionVote() {
+
+    }
 });
 
 server.listen(app.get('port'), () => {

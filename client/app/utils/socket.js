@@ -2,6 +2,19 @@ import io from 'socket.io-client';
 
 const socket = io('http://localhost:3001');
 
+export const GAME_STATE = {
+    INIT_STATE: "initState",
+    SEND_MISSION: "sendMission",
+    VOTE: "vote",
+    MISSION: "mission",
+    MISSION_SUCCESS: "missionSuccess",
+    MISSION_FAIL: "missionFail",
+    UPDATE: "update",
+    FIND_MERLIN: "findMerlin",
+    BAD_WIN: "badWin",
+    GOOD_WIN: "goodWin"
+}
+
 socket.on('connect', (params) => {
     console.log('Connect to Server');
 });
@@ -67,4 +80,58 @@ export const waitGameToStart = (callback) => {
     socket.on('startGame', () => {
         callback()
     });
+}
+
+export const selectTeam = (params) => {
+    socket.emit('selectTeam', params, function (err) {
+        if (err) {
+            alert(err);
+        } else {
+            console.log('No error');
+        }
+    });
+}
+
+export const getSelectedTeam = (callback) => {
+    socket.on('selectTeam', (selectTeam) => {
+        callback(selectTeam);
+    });
+}
+
+export const gameState = (callback) => {
+    socket.on('gameState', (params) => {
+        callback(params);
+        // switch (state) {
+        //     case "sendMission":
+        //         break;
+        //     case "":
+        //         break;
+        //     case "vote":
+        //         break;
+        //     case "mission":
+        //         break;
+        //     case "missionSuccess":
+        //         break;
+        //     case "missionFail":
+        //         break;
+        //     case "update":
+        //         break;
+        //     case "findMerlin":
+        //         break;
+        // }
+    })
+}
+
+export const sendGameState = (params) => {
+    socket.emit('gameState', params, function (err) {
+        if (err) {
+            // alert(err);
+        } else {
+            console.log('No error');
+        }
+    })
+}
+
+export const unsubscribeToGetUsers = () => {
+    socket.removeListener('updateUserList');
 }

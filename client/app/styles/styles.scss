@@ -42,6 +42,14 @@ h3 {
   background: #698ea5;
 }
 
+.custom_button.button_success {
+  background: #28a745 !important;
+}
+
+.custom_button.button_danger {
+  background: #28a745 !important;
+}
+
 .centered-form {
   display: flex;
   align-items: center;
@@ -226,6 +234,8 @@ h3 {
   display: block;
   width: 100%;
   transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+  overflow: hidden;
+  text-overflow: ellipsis; 
 }
 
 .secondary {

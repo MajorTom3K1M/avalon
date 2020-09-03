@@ -3,12 +3,14 @@ const { shuffle } = require('./utils');
 class Users {
     constructor() {
         this.users = [];
+        this.rooms = [];
     }
     addUser(id, name, room) {
         var user = { id, name, room };
         if (this.users.length < 1) {
             user.leader = true;
         }
+        this.rooms.push({ room, questRound: 0 });
         this.users.push(user);
         return user;
     }
@@ -24,6 +26,9 @@ class Users {
     }
     getUser(id) {
         return this.users.filter((user) => user.id === id)[0];
+    }
+    getRoom(room) {
+        return this.rooms.filter((filterRoom) => filterRoom.room === room)[0];
     }
     getUserList(room) {
         var users = this.users.filter((user) => user.room === room);
@@ -71,7 +76,6 @@ class Users {
         }
 
         shuffle(usersInRoom);
-
         // --- assign good team ---- //
         usersInRoom.forEach((user, ind) => {
             if (ind < teamSetup.good) {
@@ -93,7 +97,6 @@ class Users {
             }
             // this.changeUserInfo(user.id, { field: 'isGameStart', value: true });
         });
-
     }
     changeUserInfo(id, fieldValue) {
         let user = this.getUser(id);
@@ -104,6 +107,26 @@ class Users {
                 this.users[ind] = user;
             }
         });
+    }
+    changeRoomInfo(room, fieldValue) {
+        let newRoom = this.getRoom(room);
+        newRoom[fieldValue.field] = fieldValue.value;
+
+        this.rooms.forEach((inListRoom, ind) => {
+            if (inListRoom.room === room) {
+                this.rooms[ind] = newRoom;
+            }
+        });
+    }
+    resetVote(room) {
+        let usersInRoom = this.getUserList(room);
+        usersInRoom.forEach((user, ind) => {
+            this.changeUserInfo(user.id, { field: 'vote', value: null });
+        });
+    }
+    updateVote(id, value) {
+        let user = this.getUser(id);
+        this.changeUserInfo(user.id, { field: 'vote', value: value });
     }
 }
 

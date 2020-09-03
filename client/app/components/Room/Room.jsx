@@ -1,6 +1,10 @@
 import React, { Component } from 'react';
 import { history } from '../../helpers';
-import { onConnect, getUserList, updateUserStatus, updateLeader, onStartGame, waitGameToStart } from '../../utils/socket'
+import { onConnect, getUserList, 
+    updateUserStatus, updateLeader, 
+    onStartGame, waitGameToStart,
+    unsubscribeToGetUsers
+} from '../../utils/socket'
 
 import {
     Col,
@@ -19,24 +23,6 @@ class Room extends Component {
             leader: false,
             users: []
         }
-        getUserList((users) => {
-            this.setState({ users }, () => {
-                const { room, name } = this.state;
-                let thisUser = users.find((user) => user.name === name && user.room === room)
-                if (thisUser) {
-                    this.setState({ leader: thisUser.leader ? true : false, id: thisUser.id });
-                }
-            });
-            // if (users.every((currentValue) => (currentValue.isGameStart === true))) {
-            //     const { room, name, leader } = this.state;
-            //     var params = this.props.location.state;
-            //     if (!params || !params.name || !params.room) {
-            //         history.push('/');
-            //     } else {
-            //         history.push(`/${room}/ingame`, { room, name, leader, users });
-            //     }
-            // }
-        });
 
         this.onReady = this.onReady.bind(this);
         this.onStartGame = this.onStartGame.bind(this);
@@ -50,10 +36,21 @@ class Room extends Component {
             this.setState({ name: params.name, room: params.room });
             onConnect(params);
             waitGameToStart(() => {
+                unsubscribeToGetUsers();
                 const { room, name, leader, users } = this.state;
                 history.push(`/${room}/ingame`, { room, name, leader, users });
             });
         }
+
+        getUserList((users) => {
+            this.setState({ users }, () => {
+                const { room, name } = this.state;
+                let thisUser = users.find((user) => user.name === name && user.room === room)
+                if (thisUser) {
+                    this.setState({ leader: thisUser.leader ? true : false, id: thisUser.id });
+                }
+            });
+        });
     }
 
     getUserList() {

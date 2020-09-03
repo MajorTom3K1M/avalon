@@ -1,12 +1,19 @@
 import React from 'react';
-import { getUserList, requestUserList } from '../../utils/socket'
+import {
+    getUserList, requestUserList,
+    unsubscribeToGetUsers, sendGameState,
+    gameState, GAME_STATE
+} from '../../utils/socket';
 import { history } from '../../helpers';
+
+import SelectTeam from './SelectTeam.jsx';
 
 import {
     Col,
     Row,
     Container,
-} from 'reactstrap'
+    Input
+} from 'reactstrap';
 
 class InGame extends React.Component {
     constructor(props) {
@@ -17,6 +24,9 @@ class InGame extends React.Component {
             status: false,
             leader: false,
             role: '',
+            gameState: '',
+            questRound: 0,
+            team: [],
             users: []
         }
         getUserList((users) => {
@@ -29,6 +39,8 @@ class InGame extends React.Component {
             });
             console.log(users)
         });
+
+        this.handleCheckbox = this.handleCheckbox.bind(this);
     }
 
     componentDidMount() {
@@ -38,11 +50,63 @@ class InGame extends React.Component {
         } else {
             this.setState({ name: params.name, room: params.room, leader: params.leader ? params.leader : false });
             requestUserList(params);
+            sendGameState({ state: GAME_STATE.INIT_STATE, room: params.room });
+        }
+        gameState((gameStateParams) => {
+            console.log("GET GAME STATE", gameStateParams)
+            switch (gameStateParams.state) {
+                case GAME_STATE.INIT_STATE:
+                    this.setState({
+                        gameState: gameStateParams.setState,
+                        questRound: gameStateParams.roomInfo.questRound,
+                        questMember: gameStateParams.roomInfo.questMember
+                    });
+                    break;
+                case GAME_STATE.SEND_MISSION:
+                    if (gameStateParams.type === "updateTeamMemberList") {
+                        if (this.state.team.length <= this.state.questMember[this.state.questRound]) {
+                            this.setState({ team: gameStateParams.team });
+                        }
+                    } else if (gameStateParams.type === "confirm") {
+                        // Confirm Team
+                    }
+                    break;
+                case GAME_STATE.VOTE:
+                    break;
+            }
+
+            if (gameStateParams.type === 'changeState') {
+                this.setState({ gameState: gameStateParams.state });
+            }
+        })
+    }
+
+    componentWillUnmount() {
+        unsubscribeToGetUsers();
+    }
+
+    handleCheckbox(e) {
+        const { team } = this.state;
+        if (e.currentTarget.checked) {
+            let joined = team.concat(e.currentTarget.value);
+            if (joined.length <= this.state.questMember[this.state.questRound]) {
+                this.setState({ team: joined }, () => {
+                    let params = { state: this.state.gameState, team: this.state.team, room: this.state.room }
+                    sendGameState(params);
+                });
+            } else {
+                alert(`ในรอบที่ ${this.state.questRound + 1} ต้องมีสมาชิกออกไปทำภาระกิจ ${this.state.questMember[this.state.questRound]} คน`);
+            }
+        } else {
+            this.setState({ team: team.filter((name) => name !== e.currentTarget.value) }, () => {
+                let params = { state: this.state.gameState, team: this.state.team, room: this.state.room }
+                sendGameState(params);
+            });
         }
     }
 
     getUserList() {
-        const { users, role } = this.state;
+        const { users, role, leader, gameState, team } = this.state;
         // EvilLeader Merlin can't see 
         // Merlin can't see EvilLeader see EvilTeam
         if (role.toLowerCase() === 'merlin') {
@@ -51,8 +115,14 @@ class InGame extends React.Component {
                     {
                         users.map((user, ind) => (
                             <Col sm={6} style={{ paddingBottom: 5 }} key={ind} >
-                                <div className={ user.role?.toLowerCase() === 'evilteam' ? "outline danger" : "outline secondary"}>
-                                    {user.name} { user.role?.toLowerCase() === 'evilteam' ? '😈' : ''} {user.leader ? '👑' : ''}
+                                <div className={user.role?.toLowerCase() === 'evilteam' ? "outline danger" : "outline secondary"}>
+                                    {user.name} {user.role?.toLowerCase() === 'evilteam' ? '😈' : ''} {user.leader ? '👑' : ''}
+                                    {
+                                        gameState === GAME_STATE.SEND_MISSION && leader ?
+                                            <span className="float-right align-middle justify-content-center">
+                                                <input onChange={this.handleCheckbox} value={user.name} checked={team.includes(user.name)} type="checkbox" />{' '}
+                                            </span> : null
+                                    }
                                 </div>
                             </Col>
                         ))
@@ -66,8 +136,14 @@ class InGame extends React.Component {
                     {
                         users.map((user, ind) => (
                             <Col sm={6} style={{ paddingBottom: 5 }} key={ind} >
-                                <div className={ user.role?.toLowerCase() === 'evilteam' || user.role.toLowerCase() === 'evilleader' ? "outline danger" : "outline secondary"}>
-                                    {user.name} { user.role?.toLowerCase() === 'evilteam' || user.role.toLowerCase() === 'evilleader' ? '😈' : ''} {user.leader ? '👑' : ''}
+                                <div className={user.role?.toLowerCase() === 'evilteam' || user.role.toLowerCase() === 'evilleader' ? "outline danger" : "outline secondary"}>
+                                    {user.name} {user.role?.toLowerCase() === 'evilteam' || user.role.toLowerCase() === 'evilleader' ? '😈' : ''} {user.leader ? '👑' : ''}
+                                    {
+                                        gameState === GAME_STATE.SEND_MISSION && leader ?
+                                            <span className="float-right align-middle justify-content-center">
+                                                <input onChange={this.handleCheckbox} value={user.name} checked={team.includes(user.name)} type="checkbox" />{' '}
+                                            </span> : null
+                                    }
                                 </div>
                             </Col>
                         ))
@@ -83,6 +159,12 @@ class InGame extends React.Component {
                             <Col sm={6} style={{ paddingBottom: 5 }} key={ind} >
                                 <div className={"outline secondary"}>
                                     {user.name} {user.leader ? '👑' : ''}
+                                    {
+                                        gameState === GAME_STATE.SEND_MISSION && leader ?
+                                            <span className="float-right align-middle justify-content-center">
+                                                <input onChange={this.handleCheckbox} value={user.name} checked={team.includes(user.name)} type="checkbox" />{' '}
+                                            </span> : null
+                                    }
                                 </div>
                             </Col>
                         ))
@@ -92,23 +174,19 @@ class InGame extends React.Component {
         }
     }
 
+
     render() {
-        const { role } = this.state;
+        const { role, team } = this.state;
         return (
             <div className="centered-form">
-                <div className="centered-form__bigger_form">
-                    <div className="form-field">
-                        <h1>{role}</h1>
-                    </div>
-                    <div className="form-field">
-                        <Container fluid>
-                            {this.getUserList()}
-                        </Container>
-                    </div>
-                    <div className="form-field">
-
-                    </div>
-                </div>
+                <SelectTeam
+                    getUserList={() => this.getUserList()}
+                    role={role} team={team}
+                    member={this.state.questMember[this.state.questRound]}
+                    leader={this.state.leader}
+                    room={this.state.room}
+                    gameState={this.state.gameState}
+                />
             </div>
         );
     }
