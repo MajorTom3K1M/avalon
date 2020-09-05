@@ -10,7 +10,12 @@ class Users {
         if (this.users.length < 1) {
             user.leader = true;
         }
-        this.rooms.push({ room, questRound: 0, leaderId: id });
+        this.rooms.push({ 
+            room, questRound: 0, 
+            leaderId: id, 
+            voteSuccess: 0, voteFail: 0, 
+            successTime: 0, failTime: 0 
+        });
         this.users.push(user);
         return user;
     }

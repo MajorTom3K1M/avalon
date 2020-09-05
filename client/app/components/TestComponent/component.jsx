@@ -12,6 +12,15 @@ import {
 } from 'reactstrap';
 
 class Component extends React.Component {
+    users = [
+        { name: "Jakkarin", vote: undefined },
+        { name: "Jakkarin1", vote: false },
+        { name: "Jakkarin2", vote: false },
+        { name: "Jakkarin3", vote: false },
+        { name: "Jakkarin4", vote: true },
+        { name: "Jakkarin5", vote: true }
+    ]
+
     constructor(props) {
         super(props);
         // gamePhase : selectteam, voting
@@ -90,7 +99,7 @@ class Component extends React.Component {
         return (
             <div className="centered-form">
                 <div className="centered-form__bigger_form">
-                    <SubComponent getUserList={() => this.getUserList()} team={team} member={2} />
+                    <SubComponent getUserList={() => this.getUserList()} team={team} member={2} users={this.users} />
                 </div>
             </div>
         );

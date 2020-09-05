@@ -29,7 +29,8 @@ class InGame extends React.Component {
             questRound: 0,
             questMember: [],
             team: [],
-            users: []
+            users: [],
+            score: { evilWin: 0, goodWin: 0 }
         }
         getUserList((users) => {
             this.setState({ users }, () => {
@@ -55,9 +56,12 @@ class InGame extends React.Component {
             sendGameState({ state: GAME_STATE.INIT_STATE, room: params.room });
         }
         gameState((gameStateParams) => {
-            console.log("GET GAME STATE", gameStateParams)
+            console.log("GET GAME STATE", gameStateParams);
+            let { score } = this.state;
+            let newScoreObj = score;
             switch (gameStateParams.state) {
                 case GAME_STATE.INIT_STATE:
+                    // console.log("INIT STATE", gameStateParams);
                     this.setState({
                         gameState: gameStateParams.setState,
                         questRound: gameStateParams.roomInfo.questRound,
@@ -69,24 +73,32 @@ class InGame extends React.Component {
                         if (this.state.team.length <= this.state.questMember[this.state.questRound]) {
                             this.setState({ team: gameStateParams.team });
                         }
-                    } else if (gameStateParams.type === "confirm") {
-                        // Confirm Team
                     }
                     break;
                 case GAME_STATE.VOTE:
                     break;
+                case GAME_STATE.MISSION_SUCCESS:
+                    console.log("MISSION SUCCESS");
+                    newScoreObj.goodWin++;
+                    this.setState({ score: newScoreObj });
+                    break;
+                case GAME_STATE.MISSION_FAIL:
+                    console.log("MISSION FAIL");
+                    newScoreObj.evilWin++;
+                    this.setState({ score: newScoreObj });
+                    break;
             }
 
             if (gameStateParams.type === 'changeState') {
-                this.setState({ gameState: gameStateParams.state },() => {
+                this.setState({ gameState: gameStateParams.state }, () => {
                     console.log(this.state);
                 });
-            }  
+            }
             if (gameStateParams.type === 'updatePlayerList') {
                 this.setState({ users: gameStateParams.users });
-            }  
+            }
             if (gameStateParams.type === 'updateLeader') {
-                let thisUser = gameStateParams.users.find((user) => (user.id === this.state.id)); 
+                let thisUser = gameStateParams.users.find((user) => (user.id === this.state.id));
                 this.setState({ leader: thisUser.leader ? true : false, team: [] });
             }
         })
@@ -118,7 +130,6 @@ class InGame extends React.Component {
 
     getUserList() {
         const { users, role, leader, gameState, team } = this.state;
-        // EvilLeader Merlin can't see 
         // Merlin can't see EvilLeader see EvilTeam
         if (role.toLowerCase() === 'merlin') {
             return (
@@ -187,17 +198,21 @@ class InGame extends React.Component {
 
 
     render() {
-        const { role, team } = this.state;
+        const { role, team, questMember, questRound, score } = this.state;
+        console.log("state : ", this.state);
         return (
             <div className="centered-form">
                 <SelectTeam
                     getUserList={() => this.getUserList()}
+                    users={this.state.users}
                     role={role} team={team}
-                    member={this.state.questMember[this.state.questRound]}
+                    member={questMember.length > 0 ? questMember[questRound] : null}
                     leader={this.state.leader}
                     room={this.state.room}
                     gameState={this.state.gameState}
+                    name={this.state.name}
                     id={this.state.id}
+                    score={score}
                 />
             </div>
         );
