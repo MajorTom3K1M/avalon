@@ -25,6 +25,14 @@ class SelectTeam extends React.Component {
         this.evilRole = ['evilleader', 'evilteam', 'assassin', 'stupidevil']
     }
 
+    componentDidUpdate(prevProps) {
+        const { gameState } = this.props;
+        if (prevProps.gameState !== gameState &&
+            [GAME_STATE.MISSION, GAME_STATE.VOTE].includes(gameState)) {
+                this.setState({ vote: '', missionVote: '' });
+        }
+    }
+
     onConfirm() {
         const { gameState, room } = this.props;
         sendGameState({ state: gameState, type: 'confirm', room: room });
@@ -118,7 +126,7 @@ class SelectTeam extends React.Component {
                                 : null
                         }
                         {
-                            vote || leader ?
+                            leader || [GAME_STATE.MISSION, GAME_STATE.VOTE].includes(gameState) ?
                                 <>
                                     <div style={{ paddingTop: 10 }}></div>
                                     <div className="outline secondary">

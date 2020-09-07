@@ -5,6 +5,7 @@ import {
     gameState, GAME_STATE
 } from '../../utils/socket';
 import { history } from '../../helpers';
+import Swal from 'sweetalert2';
 
 import SelectTeam from './SelectTeam.jsx';
 
@@ -59,6 +60,7 @@ class InGame extends React.Component {
             console.log("GET GAME STATE", gameStateParams);
             let { score } = this.state;
             let newScoreObj = score;
+            let timerInterval;
             switch (gameStateParams.state) {
                 case GAME_STATE.INIT_STATE:
                     // console.log("INIT STATE", gameStateParams);
@@ -78,20 +80,80 @@ class InGame extends React.Component {
                 case GAME_STATE.VOTE:
                     break;
                 case GAME_STATE.MISSION_SUCCESS:
-                    console.log("MISSION SUCCESS");
+                    // notify evil win and who vote
+                    Swal.fire({
+                        // title: 'Auto close alert!',
+                        html: `
+                            <span class="d-flex justify-content-center" style={{ paddingTop: 10 }}>
+                                <h1 style="color:green;">ภารกิจสำเร็จ</h1>
+                            </span>
+                            <span className="d-flex justify-content-center">
+                                <span className="d-flex">จะปิดใน <b></b> milliseconds.</span>
+                            </span>
+                        `,
+                        timer: 5000,
+                        timerProgressBar: true,
+                        onBeforeOpen: () => {
+                            Swal.showLoading()
+                            timerInterval = setInterval(() => {
+                                const content = Swal.getContent()
+                                if (content) {
+                                    const b = content.querySelector('b')
+                                    if (b) {
+                                        b.textContent = Swal.getTimerLeft()
+                                    }
+                                }
+                            }, 100)
+                        },
+                        onClose: () => {
+                            clearInterval(timerInterval)
+                        }
+                    });
                     newScoreObj.goodWin++;
                     this.setState({ score: newScoreObj });
+                    sendGameState({ state: GAME_STATE.MISSION_SUCCESS, room: params.room });
                     break;
                 case GAME_STATE.MISSION_FAIL:
-                    console.log("MISSION FAIL");
+                    // notify evil win and who vote
+                    Swal.fire({
+                        // title: 'Auto close alert!',
+                        html: `
+                                <span class="d-flex justify-content-center" style={{ paddingTop: 10 }}>
+                                    <h1 style="color:red;">Evil แฝงอยู่ในทีมทำภารกิจ</h1>
+                                </span>
+                                <span className="d-flex justify-content-center">
+                                    <span className="d-flex">จะปิดใน <b></b> milliseconds.</span>
+                                </span>
+                        `,
+                        timer: 5000,
+                        timerProgressBar: true,
+                        onBeforeOpen: () => {
+                            Swal.showLoading()
+                            timerInterval = setInterval(() => {
+                                const content = Swal.getContent()
+                                if (content) {
+                                    const b = content.querySelector('b')
+                                    if (b) {
+                                        b.textContent = Swal.getTimerLeft()
+                                    }
+                                }
+                            }, 100)
+                        },
+                        onClose: () => {
+                            clearInterval(timerInterval)
+                        }
+                    });
                     newScoreObj.evilWin++;
                     this.setState({ score: newScoreObj });
+                    sendGameState({ state: GAME_STATE.MISSION_FAIL, room: params.room });
+                    break;
+                default:
                     break;
             }
 
             if (gameStateParams.type === 'changeState') {
                 this.setState({ gameState: gameStateParams.state }, () => {
-                    console.log(this.state);
+                    console.log("change state : ", this.state);
                 });
             }
             if (gameStateParams.type === 'updatePlayerList') {
@@ -99,7 +161,10 @@ class InGame extends React.Component {
             }
             if (gameStateParams.type === 'updateLeader') {
                 let thisUser = gameStateParams.users.find((user) => (user.id === this.state.id));
-                this.setState({ leader: thisUser.leader ? true : false, team: [] });
+                this.setState({ leader: thisUser.leader ? true : false, team: [], users: gameStateParams.users });
+            }
+            if (gameStateParams.type === 'updateRound') {
+                this.setState({ questRound: gameStateParams.round });
             }
         })
     }

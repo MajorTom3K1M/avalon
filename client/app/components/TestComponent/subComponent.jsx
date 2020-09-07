@@ -13,7 +13,7 @@ class SubComponent extends React.Component {
         this.state = {
             hello: "",
             vote: '',
-            gameState: '',
+            gameState: true,
             score: {
                 evilWin: 0,
                 goodWin: 0
@@ -23,6 +23,14 @@ class SubComponent extends React.Component {
         this.onApprove = this.onApprove.bind(this);
         this.onReject = this.onReject.bind(this);
         this.onSuccess = this.onSuccess.bind(this);
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        console.log(prevState.gameState);
+        if(prevState.gameState !== this.state.gameState) {
+            console.log("GAME STATE CHANGE!!!");
+            this.setState({ vote: '' });
+        }
     }
 
     onApprove() {
@@ -35,7 +43,7 @@ class SubComponent extends React.Component {
     }
 
     onSuccess() {
-        this.setState({ vote: '' });
+        this.setState((prevState) => ({ gameState: !prevState.gameState  }));
     }
 
     render() {
