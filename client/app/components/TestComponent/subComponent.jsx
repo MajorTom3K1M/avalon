@@ -79,7 +79,7 @@ class SubComponent extends React.Component {
                                     </span>
                                     <br />
                                     <span>
-                                        {team.join(" ")}
+                                        {team.join(", ")}
                                     </span>
                                     {
                                         team.length !== member ? null :

@@ -154,6 +154,17 @@ class Users {
         this.changeUserInfo(newLeader.id, { field: 'leader', value: true });
         this.changeRoomInfo(room, { field: 'leaderId', value: newLeader.id });
     }
+    randomLeader(room) {
+        let userList = this.getUserList(room);
+        let roomInfo = this.getRoom(room);
+        let leaderId = roomInfo.leaderId;
+
+        let newLeader = this.users[Math.round(Math.random() * (userList.length - 1))];
+
+        this.changeUserInfo(leaderId, { field: 'leader', value: false });
+        this.changeUserInfo(newLeader.id, { field: 'leader', value: true });
+        this.changeRoomInfo(room, { field: 'leaderId', value: newLeader.id });
+    }
 }
 
 module.exports = { Users };

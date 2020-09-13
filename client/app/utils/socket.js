@@ -12,7 +12,8 @@ export const GAME_STATE = {
     UPDATE: "update",
     FIND_MERLIN: "findMerlin",
     BAD_WIN: "badWin",
-    GOOD_WIN: "goodWin"
+    GOOD_WIN: "goodWin",
+    RESET: "restartGame"
 }
 
 socket.on('connect', (params) => {

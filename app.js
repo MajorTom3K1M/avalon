@@ -150,8 +150,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('gameState', (params, callback) => {
-        // let roomInfo = users.getRoom(room);
-        // console.log(roomInfo);
+        let roomInfo;
+        var failTime;
+        var successTime;
         switch (params.state) {
             case "initState":
                 users.changeRoomInfo(params.room, {
@@ -159,7 +160,8 @@ io.on('connection', (socket) => {
                     value: GAME_STATE.SEND_MISSION
                 });
 
-                console.log(users.getRoom(params.room));
+                randomLeader(params.room);
+
                 io.to(params.room).emit('gameState', {
                     state: GAME_STATE.INIT_STATE,
                     setState: GAME_STATE.SEND_MISSION,
@@ -169,7 +171,7 @@ io.on('connection', (socket) => {
 
                 break;
             case "sendMission":
-                let roomInfo = users.getRoom(params.room);
+                roomInfo = users.getRoom(params.room);
                 let member = roomInfo.questMember[roomInfo.round];
                 if (params.type === 'confirm') {
                     users.resetVote(params.room);
@@ -191,10 +193,11 @@ io.on('connection', (socket) => {
                     let reject = userList.filter(user => user.vote === false).length;
                     if (reject >= approve) {
                         changeLeader(params.room);
+                        sendNoti(params.room, 'reject');
                         changeState(params.room, GAME_STATE.SEND_MISSION);
                     } else if (approve > reject) {
+                        sendNoti(params.room, 'approve');
                         changeState(params.room, GAME_STATE.MISSION);
-                        // updateMissionVote();
                     }
                 }
 
@@ -202,10 +205,12 @@ io.on('connection', (socket) => {
                 break;
             case "mission":
                 if (params.type === 'vote') {
-                    let roomInfo = users.getRoom(params.room);
+                    roomInfo = users.getRoom(params.room);
                     let twoFail = roomInfo.twoFail;
                     var voteSuccess = roomInfo.voteSuccess;
                     var voteFail = roomInfo.voteFail;
+                    failTime = roomInfo.failTime;
+                    successTime = roomInfo.successTime;
                     if (params.vote) {
                         ++voteSuccess;
                         users.changeRoomInfo(params.room, { field: 'voteSuccess', value: voteSuccess });
@@ -215,46 +220,35 @@ io.on('connection', (socket) => {
                     }
 
                     if (params.team && (voteSuccess + voteFail) === params.team.length) {
-                        console.log("TEST PARAMS ALL VOTE : ");
                         users.changeRoomInfo(params.room, { field: 'questRound', value: roomInfo.questRound++ });
                         var newState;
                         if (roomInfo.questRound === 4 && twoFail) {
                             if (voteFail >= 2) {
                                 // Mission Fail
+                                ++failTime;
                                 newState = GAME_STATE.MISSION_FAIL;
-                                users.changeRoomInfo(params.room, { field: 'failTime', value: roomInfo.failTime++ });
+                                users.changeRoomInfo(params.room, { field: 'failTime', value: failTime });
                             } else {
                                 // Mission Success
+                                ++successTime;
                                 newState = GAME_STATE.MISSION_SUCCESS;
-                                users.changeRoomInfo(params.room, { field: 'successTime', value: roomInfo.successTime++ });
+                                users.changeRoomInfo(params.room, { field: 'successTime', value: successTime });
                             }
-                            // changeLeader(params.room);
-                            // users.resetVote(params.room);
                         } else {
                             if (voteFail >= 1) {
                                 // Mission Fail
+                                ++failTime;
                                 newState = GAME_STATE.MISSION_FAIL;
-                                users.changeRoomInfo(params.room, { field: 'failTime', value: roomInfo.failTime++ });
+                                users.changeRoomInfo(params.room, { field: 'failTime', value: failTime });
                             } else {
                                 // Mission Success
+                                ++successTime;
                                 newState = GAME_STATE.MISSION_SUCCESS;
-                                users.changeRoomInfo(params.room, { field: 'successTime', value: roomInfo.successTime++ });
+                                users.changeRoomInfo(params.room, { field: 'successTime', value: successTime });
                             }
                             changeLeader(params.room);
-                            // users.resetVote(params.room);
                         }
 
-                        if (roomInfo.failTime >= 3) {
-                            // Evil win
-
-                            // End game
-                            // intial all state (new game)
-                            changeState(params.room, GAME_STATE.BAD_WIN);
-                        } else if (roomInfo.successTime >= 3) {
-                            // Go into find merlin
-
-                            changeState(params.room, GAME_STATE.GOOD_WIN);
-                        }
                         resetMissionVote(params.room);
                         increaseRound(params.room);
                         changeState(params.room, newState);
@@ -262,22 +256,60 @@ io.on('connection', (socket) => {
                 }
                 break;
             case "missionSuccess":
+                roomInfo = users.getRoom(params.room);
                 users.resetVote(params.room);
+                successTime = roomInfo.successTime;
+
+                if(successTime >= 3) {
+                    changeState(params.room, GAME_STATE.FIND_MERLIN);
+                } else {
+                    changeState(params.room, GAME_STATE.SEND_MISSION);
+                }
+
                 updatePlayersList(params.room);
-                changeState(params.room, GAME_STATE.SEND_MISSION);
                 break;
             case "missionFail":
+                roomInfo = users.getRoom(params.room);
                 users.resetVote(params.room);
+                failTime = roomInfo.failTime;
+
+                if(failTime >= 3) {
+                    changeState(params.room, GAME_STATE.BAD_WIN);
+                } else {
+                    changeState(params.room, GAME_STATE.SEND_MISSION);
+                }
                 updatePlayersList(params.room);
-                changeState(params.room, GAME_STATE.SEND_MISSION);
                 break;
             case "update":
                 break;
             case "findMerlin":
+                findMerlin(params);
                 break;
             case "goodWin":
                 break;
             case "badWin":
+                break;
+            case "restartGame":
+                users.changeRoomInfo(params.room, {
+                    field: 'state',
+                    value: GAME_STATE.SEND_MISSION
+                });
+
+                let usersInRoom = users.getUserList(room);
+                let countUsers = usersInRoom.length;
+                users.randomRole(usersInRoom, countUsers);
+
+                randomLeader(params.room);
+                restartGame(params);
+
+                io.to(params.room).emit('gameState', {
+                    state: GAME_STATE.INIT_STATE,
+                    setState: GAME_STATE.SEND_MISSION,
+                    roomInfo: users.getRoom(params.room),
+                    type: 'initSetup'
+                });
+
+                updatePlayersList(params.room);
                 break;
         }
     })
@@ -315,6 +347,12 @@ io.on('connection', (socket) => {
         let userList = users.getUserList(room);
         io.to(room).emit('gameState', { type: 'updateLeader', users: userList });
     }
+    
+    function randomLeader(room) {
+        users.randomLeader(room);
+        let userList = users.getUserList(room);
+        io.to(room).emit('gameState', { type: 'updateLeader', users: userList });
+    }
 
     function increaseRound(room) {
         let roomInfo = users.getRoom(room);
@@ -328,11 +366,26 @@ io.on('connection', (socket) => {
         users.changeRoomInfo(room, { field: 'voteFail', value: 0 });
     }
 
-    function endGame(room) {
-        io.to(room).emit('gameState', { type: 'endGame' });
+    function sendNoti(room, name) {
+        io.to(room).emit('gameState', { type: 'notification', name: name });
     }
 
-    function updateMissionVote() {
+    function findMerlin(params) {
+        let userList = users.getUserList(params.room);
+        let isMerlin = userList.find((user) => user.name === params.selectMerlin);
+        if (isMerlin) {
+            changeState(params.room, GAME_STATE.BAD_WIN);
+        } else {
+            changeState(params.room, GAME_STATE.GOOD_WIN);
+        }
+    }
+
+    function restartGame(params) {
+        users.changeRoomInfo(params.room, { field: 'questRound', value: 0 });
+        users.changeRoomInfo(params.room, { field: 'voteSuccess', value: 0 });
+        users.changeRoomInfo(params.room, { field: 'voteFail', value: 0 });
+        users.changeRoomInfo(params.room, { field: 'successTime', value: 0 });
+        users.changeRoomInfo(params.room, { field: 'failTime', value: 0 });
     }
 });
 

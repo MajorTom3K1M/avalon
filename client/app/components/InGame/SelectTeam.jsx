@@ -1,7 +1,5 @@
 import React from 'react';
-import { sendGameState, GAME_STATE } from '../../utils/socket'
-import PropTypes from 'prop-types';
-import { history } from '../../helpers';
+import { sendGameState, GAME_STATE } from '../../utils/socket';
 
 import {
     Container,
@@ -29,7 +27,7 @@ class SelectTeam extends React.Component {
         const { gameState } = this.props;
         if (prevProps.gameState !== gameState &&
             [GAME_STATE.MISSION, GAME_STATE.VOTE].includes(gameState)) {
-                this.setState({ vote: '', missionVote: '' });
+            this.setState({ vote: '', missionVote: '' });
         }
     }
 
@@ -95,7 +93,7 @@ class SelectTeam extends React.Component {
                                     </span>
                                     <br />
                                     <span>
-                                        {team.join(" ")}
+                                        {team.join(", ")}
                                     </span>
                                     {
                                         gameState === GAME_STATE.SEND_MISSION && member > 0 && team.length === member && leader === true ?
@@ -135,10 +133,10 @@ class SelectTeam extends React.Component {
                                         </span>
                                         <br />
                                         <span className="d-flex justify-content-center">
-                                            <span className="d-flex">โหวต Approve :  {users.map((u) => { if (u.vote) { return u.name } }).join(" ")} </span>
+                                            <span className="d-flex">โหวต Approve :  {users.map((u) => { if (u.vote) { return u.name } }).join(", ")} </span>
                                         </span>
                                         <span className="d-flex justify-content-center">
-                                            <span className="d-flex">โหวต Reject : {users.map((u) => { if (u.vote === false) { return u.name } }).join(" ")} </span>
+                                            <span className="d-flex">โหวต Reject : {users.map((u) => { if (u.vote === false) { return u.name } }).join(", ")} </span>
                                         </span>
                                     </div>
                                 </>

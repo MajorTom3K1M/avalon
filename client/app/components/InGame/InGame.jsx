@@ -31,7 +31,8 @@ class InGame extends React.Component {
             questMember: [],
             team: [],
             users: [],
-            score: { evilWin: 0, goodWin: 0 }
+            score: { evilWin: 0, goodWin: 0 },
+            selectMerlin: ''
         }
         getUserList((users) => {
             this.setState({ users }, () => {
@@ -41,10 +42,11 @@ class InGame extends React.Component {
                     this.setState({ leader: thisUser.leader ? true : false, id: thisUser.id, role: thisUser.role ? thisUser.role : '', id: thisUser.id });
                 }
             });
-            console.log(users)
         });
 
         this.handleCheckbox = this.handleCheckbox.bind(this);
+        this.findMerlinCheckbox = this.findMerlinCheckbox.bind(this);
+        this.onClickConfirmMerlin = this.onClickConfirmMerlin.bind(this);
     }
 
     componentDidMount() {
@@ -63,7 +65,6 @@ class InGame extends React.Component {
             let timerInterval;
             switch (gameStateParams.state) {
                 case GAME_STATE.INIT_STATE:
-                    // console.log("INIT STATE", gameStateParams);
                     this.setState({
                         gameState: gameStateParams.setState,
                         questRound: gameStateParams.roomInfo.questRound,
@@ -82,7 +83,6 @@ class InGame extends React.Component {
                 case GAME_STATE.MISSION_SUCCESS:
                     // notify evil win and who vote
                     Swal.fire({
-                        // title: 'Auto close alert!',
                         html: `
                             <span class="d-flex justify-content-center" style={{ paddingTop: 10 }}>
                                 <h1 style="color:green;">ภารกิจสำเร็จ</h1>
@@ -91,7 +91,7 @@ class InGame extends React.Component {
                                 <span className="d-flex">จะปิดใน <b></b> milliseconds.</span>
                             </span>
                         `,
-                        timer: 5000,
+                        timer: 3000,
                         timerProgressBar: true,
                         onBeforeOpen: () => {
                             Swal.showLoading()
@@ -116,10 +116,41 @@ class InGame extends React.Component {
                 case GAME_STATE.MISSION_FAIL:
                     // notify evil win and who vote
                     Swal.fire({
-                        // title: 'Auto close alert!',
                         html: `
                                 <span class="d-flex justify-content-center" style={{ paddingTop: 10 }}>
                                     <h1 style="color:red;">Evil แฝงอยู่ในทีมทำภารกิจ</h1>
+                                </span>
+                                <span className="d-flex justify-content-center">
+                                    <span className="d-flex">จะปิดใน <b></b> milliseconds.</span>
+                                </span>
+                        `,
+                        timer: 3000,
+                        timerProgressBar: true,
+                        onBeforeOpen: () => {
+                            Swal.showLoading()
+                            timerInterval = setInterval(() => {
+                                const content = Swal.getContent()
+                                if (content) {
+                                    const b = content.querySelector('b')
+                                    if (b) {
+                                        b.textContent = Swal.getTimerLeft()
+                                    }
+                                }
+                            }, 100)
+                        },
+                        onClose: () => {
+                            clearInterval(timerInterval)
+                        }
+                    });
+                    newScoreObj.evilWin++;
+                    this.setState({ score: newScoreObj });
+                    sendGameState({ state: GAME_STATE.MISSION_FAIL, room: params.room });
+                    break;
+                case GAME_STATE.FIND_MERLIN:
+                    Swal.fire({
+                        html: `
+                                <span class="d-flex justify-content-center" style={{ paddingTop: 10 }}>
+                                    <h1 style="color:yellow;">ทีม Evil ตามหา Merlin </h1>
                                 </span>
                                 <span className="d-flex justify-content-center">
                                     <span className="d-flex">จะปิดใน <b></b> milliseconds.</span>
@@ -143,9 +174,72 @@ class InGame extends React.Component {
                             clearInterval(timerInterval)
                         }
                     });
-                    newScoreObj.evilWin++;
-                    this.setState({ score: newScoreObj });
-                    sendGameState({ state: GAME_STATE.MISSION_FAIL, room: params.room });
+                    break;
+                case GAME_STATE.GOOD_WIN:
+                    Swal.fire({
+                        html: `
+                                <span class="d-flex justify-content-center" style={{ paddingTop: 10 }}>
+                                    <h1 style="color:green;">ทีม Good ชนะ </h1>
+                                </span>
+                                <span className="d-flex justify-content-center">
+                                    <span className="d-flex">จะปิดใน <b></b> milliseconds.</span>
+                                </span>
+                        `,
+                        timer: 5000,
+                        timerProgressBar: true,
+                        onBeforeOpen: () => {
+                            Swal.showLoading()
+                            timerInterval = setInterval(() => {
+                                const content = Swal.getContent()
+                                if (content) {
+                                    const b = content.querySelector('b')
+                                    if (b) {
+                                        b.textContent = Swal.getTimerLeft()
+                                    }
+                                }
+                            }, 100)
+                        },
+                        onClose: () => {
+                            clearInterval(timerInterval)
+                        }
+                    });
+
+                    // Reset
+                    sendGameState({ state: GAME_STATE.RESET, room: this.state.room });
+                    this.setState({ questRound: 0, score: { evilWin: 0, goodWin: 0 }, selectMerlin: '' });
+                    break;
+                case GAME_STATE.BAD_WIN:
+                    Swal.fire({
+                        html: `
+                                <span class="d-flex justify-content-center" style={{ paddingTop: 10 }}>
+                                    <h1 style="color:red;">ทีม Evil ชนะ</h1>
+                                </span>
+                                <span className="d-flex justify-content-center">
+                                    <span className="d-flex">จะปิดใน <b></b> milliseconds.</span>
+                                </span>
+                        `,
+                        timer: 5000,
+                        timerProgressBar: true,
+                        onBeforeOpen: () => {
+                            Swal.showLoading()
+                            timerInterval = setInterval(() => {
+                                const content = Swal.getContent()
+                                if (content) {
+                                    const b = content.querySelector('b')
+                                    if (b) {
+                                        b.textContent = Swal.getTimerLeft()
+                                    }
+                                }
+                            }, 100)
+                        },
+                        onClose: () => {
+                            clearInterval(timerInterval)
+                        }
+                    });
+
+                    // Reset
+                    sendGameState({ state: GAME_STATE.RESET, room: this.state.room });
+                    this.setState({ questRound: 0, score: { evilWin: 0, goodWin: 0 }, selectMerlin: '' });
                     break;
                 default:
                     break;
@@ -165,6 +259,65 @@ class InGame extends React.Component {
             }
             if (gameStateParams.type === 'updateRound') {
                 this.setState({ questRound: gameStateParams.round });
+            }
+            if (gameStateParams.type === 'notification') {
+                if (gameStateParams.name === 'reject') {
+                    Swal.fire({
+                        html: `
+                            <span class="d-flex justify-content-center" style={{ paddingTop: 10 }}>
+                                <h1 style="color:red;">การจัดทีมถูกปฏิเสธ</h1>
+                            </span>
+                            <span className="d-flex justify-content-center">
+                                <span className="d-flex">จะปิดใน <b></b> milliseconds.</span>
+                            </span>
+                        `,
+                        timer: 5000,
+                        timerProgressBar: true,
+                        onBeforeOpen: () => {
+                            Swal.showLoading()
+                            timerInterval = setInterval(() => {
+                                const content = Swal.getContent()
+                                if (content) {
+                                    const b = content.querySelector('b')
+                                    if (b) {
+                                        b.textContent = Swal.getTimerLeft()
+                                    }
+                                }
+                            }, 100)
+                        },
+                        onClose: () => {
+                            clearInterval(timerInterval)
+                        }
+                    });
+                } else if (gameStateParams.name === 'approve') {
+                    Swal.fire({
+                        html: `
+                            <span class="d-flex justify-content-center" style={{ paddingTop: 10 }}>
+                                <h1 style="color:green;">จัดตั้งทีมทำภารกิจสำเร็จ</h1>
+                            </span>
+                            <span className="d-flex justify-content-center">
+                                <span className="d-flex">จะปิดใน <b></b> milliseconds.</span>
+                            </span>
+                        `,
+                        timer: 5000,
+                        timerProgressBar: true,
+                        onBeforeOpen: () => {
+                            Swal.showLoading()
+                            timerInterval = setInterval(() => {
+                                const content = Swal.getContent()
+                                if (content) {
+                                    const b = content.querySelector('b')
+                                    if (b) {
+                                        b.textContent = Swal.getTimerLeft()
+                                    }
+                                }
+                            }, 100)
+                        },
+                        onClose: () => {
+                            clearInterval(timerInterval)
+                        }
+                    });
+                }
             }
         })
     }
@@ -193,8 +346,22 @@ class InGame extends React.Component {
         }
     }
 
+    findMerlinCheckbox(e) {
+        if (e.currentTarget.checked) {
+            this.setState({ selectMerlin: e.currentTarget.value });
+        } else {
+            this.setState({ selectMerlin: '' });
+        }
+    }
+
+    onClickConfirmMerlin() {
+        let params = { state: this.state.gameState, room: this.state.room, selectMerlin: this.state.selectMerlin };
+        sendGameState(params);
+        this.setState({ selectMerlin: '' });
+    }
+
     getUserList() {
-        const { users, role, leader, gameState, team } = this.state;
+        const { users, role, leader, gameState, team, selectMerlin } = this.state;
         // Merlin can't see EvilLeader see EvilTeam
         if (role.toLowerCase() === 'merlin') {
             return (
@@ -217,23 +384,38 @@ class InGame extends React.Component {
                 </Row>
             );
             // EvilTeam is Just a EvilTeam that can see EvilTeam
-        } else if (role.toLowerCase() === 'evilteam' || role.toLowerCase() === 'evilleader') {
+        } else if (role?.toLowerCase() === 'evilteam' || role?.toLowerCase() === 'evilleader') {
             return (
                 <Row>
                     {
                         users.map((user, ind) => (
                             <Col sm={6} style={{ paddingBottom: 5 }} key={ind} >
-                                <div className={user.role?.toLowerCase() === 'evilteam' || user.role.toLowerCase() === 'evilleader' ? "outline danger" : "outline secondary"}>
-                                    {user.name} {user.role?.toLowerCase() === 'evilteam' || user.role.toLowerCase() === 'evilleader' ? '😈' : ''} {user.leader ? '👑' : ''}
+                                <div className={user.role?.toLowerCase() === 'evilteam' || user.role?.toLowerCase() === 'evilleader' ? "outline danger" : "outline secondary"}>
+                                    {user.name} {user.role?.toLowerCase() === 'evilteam' || user.role?.toLowerCase() === 'evilleader' ? '😈' : ''} {user.leader ? '👑' : ''}
                                     {
                                         gameState === GAME_STATE.SEND_MISSION && leader ?
                                             <span className="float-right align-middle justify-content-center">
                                                 <input onChange={this.handleCheckbox} value={user.name} checked={team.includes(user.name)} type="checkbox" />{' '}
                                             </span> : null
                                     }
+                                    {
+                                        role?.toLowerCase() === 'evilleader' && gameState === GAME_STATE.FIND_MERLIN ?
+                                            <span className="float-right align-middle justify-content-center">
+                                                <input onChange={this.findMerlinCheckbox} value={user.name} checked={selectMerlin === user.name} type="checkbox" />{' '}
+                                            </span>
+                                            : null
+                                    }
                                 </div>
                             </Col>
                         ))
+                    }
+                    {
+                        gameState === GAME_STATE.FIND_MERLIN && role?.toLowerCase() === 'evilleader' && selectMerlin ?
+                            <Col style={{ paddingTop: 10 }}>
+                                <span className="d-flex justify-content-center">
+                                    <button onClick={this.onClickConfirmMerlin} className="custom_button button_success">Confirm Merlin</button>
+                                </span>
+                            </Col> : null
                     }
                 </Row>
             );
