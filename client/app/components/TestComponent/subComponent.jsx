@@ -26,7 +26,7 @@ class SubComponent extends React.Component {
     }
 
     componentDidUpdate(prevProps, prevState) {
-        console.log(prevState.gameState);
+        // console.log(prevState.gameState);
         if(prevState.gameState !== this.state.gameState) {
             console.log("GAME STATE CHANGE!!!");
             this.setState({ vote: '' });

@@ -295,7 +295,7 @@ io.on('connection', (socket) => {
                     value: GAME_STATE.SEND_MISSION
                 });
 
-                let usersInRoom = users.getUserList(room);
+                let usersInRoom = users.getUserList(params.room);
                 let countUsers = usersInRoom.length;
                 users.randomRole(usersInRoom, countUsers);
 
@@ -310,6 +310,7 @@ io.on('connection', (socket) => {
                 });
 
                 updatePlayersList(params.room);
+                io.to(params.room).emit('updateUserList', users.getUserList(params.room));
                 break;
         }
     })
@@ -372,7 +373,7 @@ io.on('connection', (socket) => {
 
     function findMerlin(params) {
         let userList = users.getUserList(params.room);
-        let isMerlin = userList.find((user) => user.name === params.selectMerlin);
+        let isMerlin = userList.find((user) => user.name === params.selectMerlin && user.role === "Merlin");
         if (isMerlin) {
             changeState(params.room, GAME_STATE.BAD_WIN);
         } else {

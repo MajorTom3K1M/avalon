@@ -36,7 +36,7 @@ class Component extends React.Component {
 
     componentDidMount() {
         getSelectedTeam((team) => {
-            console.log(team)
+            // console.log(team)
             this.setState({ team });
         });
     }

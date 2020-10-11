@@ -59,7 +59,7 @@ class InGame extends React.Component {
             sendGameState({ state: GAME_STATE.INIT_STATE, room: params.room });
         }
         gameState((gameStateParams) => {
-            console.log("GET GAME STATE", gameStateParams);
+            // console.log("GET GAME STATE", gameStateParams);
             let { score } = this.state;
             let newScoreObj = score;
             let timerInterval;
@@ -174,6 +174,7 @@ class InGame extends React.Component {
                             clearInterval(timerInterval)
                         }
                     });
+
                     break;
                 case GAME_STATE.GOOD_WIN:
                     Swal.fire({
@@ -247,7 +248,7 @@ class InGame extends React.Component {
 
             if (gameStateParams.type === 'changeState') {
                 this.setState({ gameState: gameStateParams.state }, () => {
-                    console.log("change state : ", this.state);
+                    // console.log("change state : ", this.state);
                 });
             }
             if (gameStateParams.type === 'updatePlayerList') {
@@ -446,7 +447,7 @@ class InGame extends React.Component {
 
     render() {
         const { role, team, questMember, questRound, score } = this.state;
-        console.log("state : ", this.state);
+        // console.log("state : ", this.state);
         return (
             <div className="centered-form">
                 <SelectTeam
