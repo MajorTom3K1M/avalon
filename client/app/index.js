@@ -15,6 +15,7 @@ import Component from './components/TestComponent/component.jsx';
 
 // ---------- Style Import ---------- //
 import './styles/styles.scss';
+import './styles/firefly.scss';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 render((
